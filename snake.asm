@@ -3,7 +3,6 @@
 
 ; Define constants
 %define EXTRA_SEG          0xA000
-%define DATA_SEG           0x7c0
 %define STACK_BASE_ADDR    0x9000
 %define GRID_SIZE          64000
 %define START_POS          32160
@@ -30,26 +29,24 @@ init:
    mov sp, ax               ; Setting the stack pointer to stack segment start addr
    mov ax, EXTRA_SEG
    mov es, ax               ; Setting extra segment to the video memory segment base address
-   mov ax, DATA_SEG
-   mov ds, ax               ; Setting data segment segment to boot sector address
 
    mov ax, GRPH_MODE_RT     ; Set graphics mode for bios output
    int 0x10                 ; Calling BIOS interrupt
 
-   call start
-   jmp $                    ; Endless loop (code hanging)
+   call start               ; Jump to entry point
 
 start:
    push bp
    mov bp, sp
 
    mov [SNAKE_BASE_ADDR], bp
-   sub sp, SNAKE_ALLOCATION
+   sub sp, SNAKE_ALLOCATION + 2
    call clear_snake_data
    mov word [bp - 2], START_POS
    mov word [bp - 4], START_POS - 21
    mov word [bp - 6], START_POS - 42
    mov word [bp - 8], START_POS - 42 + 6720
+   mov word [bp - SNAKE_ALLOCATION - 2], 0x4
 snake:
    call clear_screen
    call draw_snake
@@ -72,32 +69,20 @@ draw_snake_end:
    ret
 
 draw_cell:
-   push bp
-   mov bp, sp
-   sub sp, 2
-   mov byte [ss:bp - 1], SNAKE_CELL_SIZE
-   jmp draw_cell_square
-update_pos:
-   add di, 300
-draw_cell_square:
-   mov dl, [ss:bp - 1]
-   cmp dl, 0
-   je draw_cell_end
-   dec dl
-   mov byte [ss:bp - 1], dl
-   mov byte [ss:bp - 2], SNAKE_CELL_SIZE
-draw_cell_line:
-   mov cl, [ss:bp - 2]
-   cmp cl, 0
-   je update_pos
-   stosb
-   dec cl
-   mov byte [ss:bp - 2], cl
-   jmp draw_cell_line
-draw_cell_end:
-   mov sp, bp
-   pop bp
-   ret
+   mov cx, SNAKE_CELL_SIZE
+   mov dx, SNAKE_CELL_SIZE
+draw_square:
+    push cx                  ; Save row counter
+    mov cx, dx               ; Reset column counter for each row
+
+draw_row:
+    stosb                    ; Store byte at ES:DI and increment DI
+    loop draw_row            ; Repeat for 20 columns
+
+    add di, 300              ; Move to the next line (320 - 20)
+    pop cx                   ; Restore row counter
+    loop draw_square         ; Repeat for 20 rows
+    ret
 
 update_cells:
    mov bx, [SNAKE_BASE_ADDR]
@@ -119,23 +104,21 @@ recursive_update_end:
 
 clear_snake_data:
    mov bx, [SNAKE_BASE_ADDR]
+   mov cx, SNAKE_ALLOCATION
+   shr cx, 1
 clear_snake_data_loop:
    mov word [ss:bx - 2], NULL_SNAKE
    sub bx, 2
-   mov ax, [SNAKE_BASE_ADDR]
-   sub ax, bx
-   cmp ax, SNAKE_ALLOCATION
-   jl clear_snake_data_loop
-
+   loop clear_snake_data_loop
    ret
 
 clear_screen:
    xor di, di
+   mov cx, GRID_SIZE
    mov al, COLOUR_BLACK
 clear_screen_loop:
    stosb
-   cmp di, GRID_SIZE
-   jne clear_screen_loop
+   loop clear_screen_loop
    ret
 
 usleep:
