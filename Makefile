@@ -36,5 +36,4 @@ rb: clean all
 
 .PHONY: clean
 clean:
-	rm $(TARGET) || true
 	rm -rf $(BUILD_FOLDER) || true

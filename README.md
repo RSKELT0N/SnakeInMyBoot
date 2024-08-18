@@ -8,23 +8,9 @@ A simple snake game written within the first sector (512 bytes) of a hard drive;
 - As the boot sector is located within the first sector of the hard drive, the BIOS will typically load the sector into address 0x7c00 of the main memory.
 
 ## Project usage
-
-- Compile
-```
-make
-```
-
-- Clean
-```
-make clean
-```
-
-- Rebuild
-```
-make rb
-```
-
-## Execute
-```
-make run
-```
+|  Usage  | Shell Command |
+| ------- | ------------- |
+| compile | make          |
+| clean   | make clean    |
+| rebuild | make rb       |
+| execute | make run      |

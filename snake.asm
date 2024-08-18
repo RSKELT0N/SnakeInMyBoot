@@ -23,17 +23,17 @@
 %define COLOUR_WHITE       0x7
 
 init:
-   xor ax, ax               ; Base address for the stack segment (0)
-   mov ss, ax               ; Setting the stack segment to ax
+   xor ax, ax                                       ; Base address for the stack segment (0)
+   mov ss, ax                                       ; Setting the stack segment to ax
    mov ax, STACK_BASE_ADDR
-   mov sp, ax               ; Setting the stack pointer to stack segment start addr
+   mov sp, ax                                       ; Setting the stack pointer to stack segment start addr
    mov ax, EXTRA_SEG
-   mov es, ax               ; Setting extra segment to the video memory segment base address
+   mov es, ax                                       ; Setting extra segment to the video memory segment base address
 
-   mov ax, GRPH_MODE_RT     ; Set graphics mode for bios output
-   int 0x10                 ; Calling BIOS interrupt
+   mov ax, GRPH_MODE_RT                             ; Set graphics mode for bios output
+   int 0x10                                         ; Calling BIOS interrupt
 
-   call start               ; Jump to entry point
+   call start                                       ; Jump to entry point
 
 start:
    push bp
@@ -43,17 +43,14 @@ start:
    sub sp, SNAKE_ALLOCATION + 2
    call clear_snake_data
    mov word [bp - 2], START_POS
-   mov word [bp - 4], START_POS - 21
-   mov word [bp - 6], START_POS - 42
-   mov word [bp - 8], START_POS - 42 + 6720
-   mov word [bp - SNAKE_ALLOCATION - 2], 0x4
+   mov word [bp - SNAKE_ALLOCATION - 2], 0x1
 snake:
    call clear_screen
    call draw_snake
    call update_cells
    call usleep
 
-   jmp snake                  ; Endless loop (code hanging)
+   jmp snake                                        ; Endless loop (code hanging)
 
 draw_snake:
    mov bx, [SNAKE_BASE_ADDR]
@@ -72,34 +69,35 @@ draw_cell:
    mov cx, SNAKE_CELL_SIZE
    mov dx, SNAKE_CELL_SIZE
 draw_square:
-    push cx                  ; Save row counter
-    mov cx, dx               ; Reset column counter for each row
+    push cx                                         ; Save row counter
+    mov cx, dx                                      ; Reset column counter for each row
 
 draw_row:
-    stosb                    ; Store byte at ES:DI and increment DI
-    loop draw_row            ; Repeat for 20 columns
 
-    add di, 300              ; Move to the next line (320 - 20)
-    pop cx                   ; Restore row counter
-    loop draw_square         ; Repeat for 20 rows
+    stosb                                           ; Store byte at ES:DI and increment DI
+    loop draw_row                                   ; Repeat for 20 columns
+
+    add di, 300                                     ; Move to the next line (320 - 20)
+    pop cx                                          ; Restore row counter
+    loop draw_square                                ; Repeat for 20 rows
     ret
 
 update_cells:
    mov bx, [SNAKE_BASE_ADDR]
-   mov si, [SNAKE_BASE_ADDR]
+   mov ax, [ss:bx - SNAKE_ALLOCATION - 2]
+   mov cx, ax
+   dec cx
+   shl ax, 1
+   sub bx, ax
 recursive_update:
-   sub si, 2
-   mov ax, [ss:bx - 2]
-   mov cx, [ss:si - 2]
-   cmp cx, NULL_SNAKE
-   je recursive_update_end
-   mov word [ss:si - 2], ax
-   sub bx, 2
-   jmp recursive_update
+   mov dx, [ss:bx + 2]
+   mov word [ss:bx], dx
+   add bx, 2
+   loop recursive_update
 recursive_update_end:
-   mov ax, [bp - 2]
+   mov ax, [ss:bx]
    add ax, 21
-   mov word [bp - 2], ax
+   mov word [ss:bx], ax
    ret
 
 clear_snake_data:
@@ -117,19 +115,20 @@ clear_screen:
    mov cx, GRID_SIZE
    mov al, COLOUR_BLACK
 clear_screen_loop:
-   stosb
+   stosb                                            ; Store byte at ES:DI and increment DI
    loop clear_screen_loop
    ret
 
 usleep:
-    mov ax, bp
-    mov ah, 0x86       ; BIOS function to sleep
-    mov dx, ax         ; Move AX to DX (parameter for BIOS interrupt)
-    int 0x15           ; Call BIOS interrupt
+    mov ah, 0x86                                    ; BIOS function to sleep
+    mov dx, ax                                      ; Move AX to DX (parameter for BIOS interrupt)
+    int 0x15                                        ; Call BIOS interrupt
+    int 0x15
+    int 0x15
     ret
 
 ; Global Variables
 SNAKE_BASE_ADDR  dw 0
 
-times 510 - ($ - $$) db 0    ; Boot sector padding
-dw 0xaa55                    ; magic value (recognises sector as boot sector from bios)
+times 510 - ($ - $$) db 0                           ; Boot sector padding
+dw 0xaa55                                           ; magic value (recognises sector as boot sector from bios)
