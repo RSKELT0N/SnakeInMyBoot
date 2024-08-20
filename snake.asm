@@ -224,7 +224,6 @@ _check_segment_collision:
     cmp ax, si                                                        ; Compare if equal, handle exit if true
     je _handle_exit
     loop _check_segment_collision                                     ; Loop until all segments are checked
-_handle_collisions_end:
     ret
 _handle_exit:
     mov byte [EXIT], 0x1                                              ; Set the exit status to 1
