@@ -7,10 +7,11 @@
 %define GRID_SIZE          64000
 %define GRID_WIDTH         320
 %define GRID_HEIGHT        200
-%define START_POS          32160
+%define SNAKE_START_POS    32150
 %define SNAKE_ALLOCATION   50
 %define NULL_SNAKE         65535
 %define SNAKE_CELL_SIZE    15
+%define BOUNDARY_BIAS      10
 
 %define SCRTT_RT           0x0e
 %define GRPH_MODE_RT       0x0013
@@ -53,7 +54,7 @@ _start:
     sub sp, SNAKE_ALLOCATION * 2                     ; Allocate the space on the stack for the snake coordinates
     call _clear_snake_data                           ; Memset the snake cells towards null value
 
-    mov word [bp - 2], START_POS                     ; Set the start cell of the snake to the starting position
+    mov word [bp - 2], SNAKE_START_POS               ; Set the start cell of the snake to the starting position
     mov byte [SNAKE_SEGMENT_COUNT], 0x1              ; Initalise the current segment count
     mov byte [KB_SCAN_CODE], KB_SCAN_CODE_W          ; Initialise the keyboard scan code
 
@@ -63,11 +64,11 @@ _start:
 
 _loop:
     call _clear_screen
+    call _spawn_food
     call _draw_snake
+    call _handle_collisions
     call _handle_key_press
     call _update_snake
-    call _spawn_food
-    call _handle_collisions
     call _usleep
 
     mov al, [EXIT]
@@ -133,16 +134,16 @@ _update_snake_end:
     ret
 
 _move_up:
-    sub ax, GRID_WIDTH * (SNAKE_CELL_SIZE + 1)
+    sub ax, GRID_WIDTH * (SNAKE_CELL_SIZE)
     jmp _update_snake_end
 _move_down:
-    add ax, GRID_WIDTH * (SNAKE_CELL_SIZE + 1)
+    add ax, GRID_WIDTH * (SNAKE_CELL_SIZE)
     jmp _update_snake_end
 _move_left:
-    sub ax, SNAKE_CELL_SIZE + 1
+    sub ax, SNAKE_CELL_SIZE
     jmp _update_snake_end
 _move_right:
-    add ax, SNAKE_CELL_SIZE + 1
+    add ax, SNAKE_CELL_SIZE
     jmp _update_snake_end
 
 _handle_key_press:
@@ -185,14 +186,28 @@ _spawn_food_end:
 _handle_collisions:
     xor cx, cx
     mov bx, [SNAKE_BASE_ADDR]
-    mov dx, [ss:bx - 2]
+    mov ax, [ss:bx - 2]
     mov bx, [FOOD_LOCATION]
 
     ; Compare snake head against known food location
-    cmp dx, bx
+    cmp ax, bx
     je _add_snake_cell
-
 _wall_check:
+    push ax
+    xor dx, dx
+    mov bx, GRID_WIDTH
+    div bx
+    cmp dx, BOUNDARY_BIAS
+    pop ax
+    jb _handle_exit
+
+    cmp ax, 0x0 + BOUNDARY_BIAS
+    jb _handle_exit
+    cmp ax, GRID_SIZE - BOUNDARY_BIAS
+    ja _handle_exit
+    ret
+_handle_exit:
+    mov byte [EXIT], 0x1
     ret
 
 _add_snake_cell:
