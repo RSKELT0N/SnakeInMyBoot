@@ -199,12 +199,12 @@ _wall_check:
     div bx
     cmp dx, BOUNDARY_BIAS
     pop ax
-    jb _handle_exit
+    jbe _handle_exit
 
     cmp ax, 0x0 + BOUNDARY_BIAS
-    jb _handle_exit
+    jbe _handle_exit
     cmp ax, GRID_SIZE - BOUNDARY_BIAS
-    ja _handle_exit
+    jae _handle_exit
     ret
 _handle_exit:
     mov byte [EXIT], 0x1
