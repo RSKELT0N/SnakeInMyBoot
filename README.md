@@ -13,3 +13,13 @@ A simple snake game written within the first sector (512 bytes) of a hard drive;
 | clean   | make clean    |
 | rebuild | make rb       |
 | execute | make run      |
+
+## Usage
+- The program is controlled through W, A, S, and D keys for Up, Down, Left and Right movements, respectively.
+- Upon startup, the game is in an idle state, waiting for one of the valid key presses.
+
+## Binary generated
+![snake](https://github.com/user-attachments/assets/b4dd2bd8-e608-4951-8f51-431e5a963e8d)
+
+## Example 
+![snake](https://github.com/user-attachments/assets/3baf47b1-5077-4c0f-949d-3340320e1db9)
