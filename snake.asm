@@ -210,7 +210,7 @@ _wall_check:
     je _handle_exit                                                   ; With zero bias in the modular operation, handle the exit
 
     ; Check the snakes head position to check if its above the GRID_SIZE
-    cmp ax, GRID_SIZE - GRID_WIDTH   ; Compare the snake's head to last accessible position before the GRID_SIZE
+    cmp ax, GRID_SIZE - (GRID_WIDTH * SNAKE_CELL_SIZE) - GRID_WIDTH   ; Compare the snake's head to last accessible position before the GRID_SIZE
     ja _handle_exit
 
     ; Check the snakes head against the rest of it's body
