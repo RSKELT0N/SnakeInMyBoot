@@ -15,7 +15,7 @@ A simple snake game written within the first sector (512 bytes) of a hard drive;
 | execute | make run      |
 
 ## Usage
-- The program is controlled through W, A, S, and D keys for Up, Down, Left and Right movements, respectively.
+- The program is controlled through W, A, S, and D keys for Up, Left Right and Down movements, respectively.
 - Upon startup, the game is in an idle state, waiting for one of the valid key presses.
 
 ## Binary generated
