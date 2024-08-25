@@ -7,8 +7,8 @@
 %define GRID_SIZE          64000
 %define GRID_WIDTH         320
 %define GRID_HEIGHT        200
-%define SNAKE_START_POS    30545
-%define FOOD_START_POS     14545
+%define SNAKE_START_POS    32150
+%define FOOD_START_POS     16150
 %define SNAKE_ALLOCATION   50
 %define NULL_SNAKE         65535
 %define SNAKE_CELL_SIZE    10
@@ -95,7 +95,7 @@ _draw_snake:                                                          ; Draw the
 _draw_body:
     sub bx, 2                                                         ; Set the bx register to point to the first snake segment
     mov di, word [ss:bx]                                              ; Retrieve the coordinates of the snake segment
-    sub di, GRID_WIDTH * (SNAKE_CELL_SIZE / 2) - (SNAKE_CELL_SIZE / 2)
+
     push cx                                                           ; Store the snake length on the stack
     call _draw_cell                                                   ; Draw the current segment at its appropiate coordinates
     pop cx                                                            ; Load the snake length back into cx
@@ -186,7 +186,6 @@ _draw_food:
 _draw_food_end:
     mov di, [FOOD_LOCATION]                                           ; Draw the food to the screen
     mov al, COLOUR_RED
-    sub di, GRID_WIDTH * (SNAKE_CELL_SIZE / 2) - (SNAKE_CELL_SIZE / 2)
     call _draw_cell
     ret
 
@@ -211,7 +210,7 @@ _wall_check:
     je _handle_exit                                                   ; With zero bias in the modular operation, handle the exit
 
     ; Check the snakes head position to check if its above the GRID_SIZE
-    cmp ax, GRID_SIZE                                                 ; Compare the snake's head to last accessible position before the GRID_SIZE
+    cmp ax, GRID_SIZE - (GRID_WIDTH * SNAKE_CELL_SIZE) - GRID_WIDTH   ; Compare the snake's head to last accessible position before the GRID_SIZE
     ja _handle_exit
 
     ; Check the snakes head against the rest of it's body
