@@ -7,12 +7,16 @@
 %define GRID_SIZE          64000
 %define GRID_WIDTH         320
 %define GRID_HEIGHT        200
-%define SNAKE_START_POS    32150
-%define FOOD_START_POS     16150
+%define SNAKE_START_POS    32160
+%define FOOD_START_POS     16160
 %define SNAKE_ALLOCATION   50
 %define NULL_SNAKE         65535
 %define SNAKE_CELL_SIZE    10
 %define BOUNDARY_BIAS      10
+%define SNAKE_POS_X_MIN    -0x11
+%define SNAKE_POS_X_MAX    0x11
+%define SNAKE_POS_Y_MIN    -0xB
+%define SNAKE_POS_Y_MAX    0xA
 
 %define SCRTT_RT           0x0e
 %define GRPH_MODE_RT       0x0013
@@ -61,6 +65,8 @@ _start:
     mov word [FOOD_LOCATION], FOOD_START_POS                          ; Set the food to the starting position of program
     mov word [bp - 2], SNAKE_START_POS                                ; Set the start cell of the snake to the starting position
     mov byte [SNAKE_SEGMENT_COUNT], 0x1                               ; Initalise the current segment count
+    mov byte [SNAKE_POS_X], 0x0
+    mov byte [SNAKE_POS_Y], 0x0
 
 ; Startup screen
     call _clear_screen                                                ; Clear the screen within the GRID_SIZE range to be completely black
@@ -80,7 +86,6 @@ _loop:
     mov al, [EXIT]                                                    ; Load the current value of global variable exit into lower half of ax
     test al, al                                                       ; AND operation to ensure if exit status has been set to 1
     jnz _end                                                          ; Jump to exit game frame based on lower half of ax
-
     jmp _loop                                                         ; Refresh frame
 
 _end:
@@ -140,15 +145,19 @@ _update_snake_end:
 
 _move_up:                                                             ; Based on the current key press, update the head accordingly
     sub ax, GRID_WIDTH * (SNAKE_CELL_SIZE)
+    dec byte [SNAKE_POS_Y]
     jmp _update_snake_end
 _move_down:
     add ax, GRID_WIDTH * (SNAKE_CELL_SIZE)
+    inc byte [SNAKE_POS_Y]
     jmp _update_snake_end
 _move_left:
     sub ax, SNAKE_CELL_SIZE
+    dec byte [SNAKE_POS_X]
     jmp _update_snake_end
 _move_right:
     add ax, SNAKE_CELL_SIZE
+    inc byte [SNAKE_POS_X]
     jmp _update_snake_end
 
 _handle_key_press:                                                    ; Read the current keyboard scan code
@@ -192,36 +201,31 @@ _draw_food_end:
 _handle_collisions:                                                   ; Check the head of the snake to the position of food, itself and walls
     mov bx, [SNAKE_BASE_ADDR]
     mov ax, [ss:bx - 2]                                               ; Store the position of the snakes head
-    mov bx, [FOOD_LOCATION]                                           ; Store the position of the food
+    mov cx, [FOOD_LOCATION]
 
     ; Compare snake head against known food location
-    cmp ax, bx
+    cmp ax, cx
     je _add_snake_cell
 
 _wall_check:
     ; Check the snakes head position to the left and right side walls
-
-    push ax                                                           ; Push the snakes head position on the stack
-    xor dx, dx
-    mov bx, GRID_WIDTH
-    div bx
-    cmp dx, 0x0                                                       ; Compare the modular of the snakes position to the GRID_WIDTH
-    pop ax                                                            ; Pop the snakes head position off the stack
-    je _handle_exit                                                   ; With zero bias in the modular operation, handle the exit
+    cmp byte [SNAKE_POS_X], SNAKE_POS_X_MIN
+    je _handle_exit                                                   ; With the current x pos equal the left wall x, handle the exit
+    cmp byte [SNAKE_POS_X], SNAKE_POS_X_MAX
+    je _handle_exit                                                   ; With the current x pos equal the right wall x, handle the exit
 
     ; Check the snakes head position to check if its above the GRID_SIZE
-    cmp ax, GRID_SIZE - (GRID_WIDTH * SNAKE_CELL_SIZE) - GRID_WIDTH   ; Compare the snake's head to last accessible position before the GRID_SIZE
-    ja _handle_exit
+    cmp byte [SNAKE_POS_Y], SNAKE_POS_Y_MIN                           ; With the current x pos equal the top left wall y, handle the exit
+    je _handle_exit
+    cmp byte [SNAKE_POS_Y], SNAKE_POS_Y_MAX                           ; With the current x pos equal the bottom wall y, handle the exit
+    je _handle_exit
 
     ; Check the snakes head against the rest of it's body
     xor cx, cx
-    mov bx, [SNAKE_BASE_ADDR]
     mov cl, [SNAKE_SEGMENT_COUNT]
-    mov ax, [ss:bx - 2]                                               ; Retrieve the position of the snake's head
 _check_segment_collision:
     sub bx, 2
-    mov si, [ss:bx - 2]                                               ; Get the next segment coordinates
-    cmp ax, si                                                        ; Compare if equal, handle exit if true
+    cmp ax, [ss:bx - 2]                                               ; Get the next segment coordinates
     je _handle_exit
     loop _check_segment_collision                                     ; Loop until all segments are checked
     ret
@@ -233,9 +237,8 @@ _add_snake_cell:                                                      ; Upon col
     mov byte [FOOD_PRESENT], 0x0                                      ; Set the food present variable to 0
 
     mov si, [SNAKE_BASE_ADDR]                                         ; Retrieve the base address and snake segment count
+    inc byte [SNAKE_SEGMENT_COUNT]
     mov cl, [SNAKE_SEGMENT_COUNT]
-    inc cl                                                            ; Add 1 to the current length and push on the stack until needed
-    push cx
 
     shl cx, 1                                                         ; Calculate the needed offset for the new segment
     sub si, cx                                                        ; Calculate the effective address
@@ -243,8 +246,6 @@ _add_snake_cell:                                                      ; Upon col
     sub si, SNAKE_CELL_SIZE + 1
     mov word [ss:si], ax                                              ; Store the new coordinates of the new snake segment
 
-    pop cx                                                            ; Pop the length back into cx
-    mov byte [SNAKE_SEGMENT_COUNT], cl                                ; Load the lower half of ax into snake segment count
     jmp _wall_check                                                   ; Jump back for other collision checks
 
 _clear_snake_data:
@@ -300,6 +301,8 @@ EXIT                db 0                                              ; 8 bit va
 SNAKE_SEGMENT_COUNT db 0                                              ; 8 bit value of snake cell length
 KB_SCAN_CODE        db 0                                              ; 8 bit value of keyboard scan code
 FOOD_PRESENT        db 0                                              ; 8 bit value of the food is present
+SNAKE_POS_X         db 0                                              ; 8 bit value for X pos for the snake
+SNAKE_POS_Y         db 0                                              ; 8 bit value for Y pos for the snake
 
 SNAKE_BASE_ADDR     dw 0                                              ; 16 bit value of base address for the snake cell coordinates
 FOOD_LOCATION       dw 0                                              ; 16 bit value of the food position
