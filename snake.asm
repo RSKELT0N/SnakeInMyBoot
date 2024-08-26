@@ -9,7 +9,7 @@
 %define GRID_HEIGHT        200
 %define SNAKE_START_POS    32160
 %define FOOD_START_POS     16160
-%define SNAKE_ALLOCATION   50
+%define SNAKE_ALLOCATION   100
 %define NULL_SNAKE         65535
 %define SNAKE_CELL_SIZE    10
 %define BOUNDARY_BIAS      10
@@ -200,24 +200,26 @@ _draw_food_end:
 
 _handle_collisions:                                                   ; Check the head of the snake to the position of food, itself and walls
     mov bx, [SNAKE_BASE_ADDR]
-    mov ax, [ss:bx - 2]                                               ; Store the position of the snakes head
-    mov cx, [FOOD_LOCATION]
+    mov dx, [ss:bx - 2]                                               ; Store the position of the snakes head
+    mov si, [FOOD_LOCATION]
 
     ; Compare snake head against known food location
-    cmp ax, cx
+    cmp dx, si
     je _add_snake_cell
 
 _wall_check:
     ; Check the snakes head position to the left and right side walls
-    cmp byte [SNAKE_POS_X], SNAKE_POS_X_MIN
+    mov cl, [SNAKE_POS_X]
+    cmp cl, SNAKE_POS_X_MIN
     je _handle_exit                                                   ; With the current x pos equal the left wall x, handle the exit
-    cmp byte [SNAKE_POS_X], SNAKE_POS_X_MAX
+    cmp cl, SNAKE_POS_X_MAX
     je _handle_exit                                                   ; With the current x pos equal the right wall x, handle the exit
 
     ; Check the snakes head position to check if its above the GRID_SIZE
-    cmp byte [SNAKE_POS_Y], SNAKE_POS_Y_MIN                           ; With the current x pos equal the top left wall y, handle the exit
+    mov cl, [SNAKE_POS_Y]
+    cmp cl, SNAKE_POS_Y_MIN                           ; With the current x pos equal the top left wall y, handle the exit
     je _handle_exit
-    cmp byte [SNAKE_POS_Y], SNAKE_POS_Y_MAX                           ; With the current x pos equal the bottom wall y, handle the exit
+    cmp cl, SNAKE_POS_Y_MAX                           ; With the current x pos equal the bottom wall y, handle the exit
     je _handle_exit
 
     ; Check the snakes head against the rest of it's body
@@ -225,7 +227,7 @@ _wall_check:
     mov cl, [SNAKE_SEGMENT_COUNT]
 _check_segment_collision:
     sub bx, 2
-    cmp ax, [ss:bx - 2]                                               ; Get the next segment coordinates
+    cmp dx, [ss:bx - 2]                                               ; Get the next segment coordinates
     je _handle_exit
     loop _check_segment_collision                                     ; Loop until all segments are checked
     ret
@@ -237,15 +239,18 @@ _add_snake_cell:                                                      ; Upon col
     mov byte [FOOD_PRESENT], 0x0                                      ; Set the food present variable to 0
 
     mov si, [SNAKE_BASE_ADDR]                                         ; Retrieve the base address and snake segment count
-    inc byte [SNAKE_SEGMENT_COUNT]
-    mov cl, [SNAKE_SEGMENT_COUNT]
+    mov al, [SNAKE_SEGMENT_COUNT]
+    inc al
+    push ax
 
-    shl cx, 1                                                         ; Calculate the needed offset for the new segment
-    sub si, cx                                                        ; Calculate the effective address
-    mov ax, [ss:si + 2]
+    shl ax, 1                                                         ; Calculate the needed offset for the new segment
+    sub si, ax                                                        ; Calculate the effective address
+    mov di, [ss:si + 2]
     sub si, SNAKE_CELL_SIZE + 1
-    mov word [ss:si], ax                                              ; Store the new coordinates of the new snake segment
+    mov word [ss:si], di                                              ; Store the new coordinates of the new snake segment
 
+    pop ax
+    mov [SNAKE_SEGMENT_COUNT], al
     jmp _wall_check                                                   ; Jump back for other collision checks
 
 _clear_snake_data:
