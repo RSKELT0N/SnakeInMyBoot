@@ -6,6 +6,10 @@ A simple snake game written within the first sector (512 bytes) of a hard drive;
 - CPU is still within real mode (16-bit).
 - As the boot sector is located within the first sector of the hard drive, the BIOS will typically load the sector into address 0x7c00 of the main memory.
 
+## Requirements
+- nasm
+- qemu-system-x86_64
+
 ## Project usage
 |  Usage  | Shell Command |
 | ------- | ------------- |
